@@ -143,11 +143,17 @@ class LabelSmoothedCrossEntropyStreamConfidenceCriterion(FairseqCriterion):
             ignore_index=self.padding_idx,
             reduce=reduce,
         )
-        stream_out=F.softmax(stream_decoder_out, dim=-1)
-        golden_out = F.softmax(net_output[0],dim=-1)
-        c = pred_dec_similar.unsqueeze(-1)
-        confi_stream_out = c*stream_out + (1.0-c)*golden_out
-        confi_stream_out = torch.log(confi_stream_out)
+        # Compute the probability interpolation in log space. In fp16,
+        # softmax probabilities for non-target classes can underflow to zero,
+        # and the following log would otherwise produce inf losses.
+        eps = 1e-6
+        c = pred_dec_similar.float().clamp(min=eps, max=1.0 - eps).unsqueeze(-1)
+        stream_lprobs = F.log_softmax(stream_decoder_out.float(), dim=-1)
+        golden_lprobs = F.log_softmax(net_output[0].float(), dim=-1)
+        confi_stream_out = torch.logaddexp(
+            c.log() + stream_lprobs,
+            torch.log1p(-c) + golden_lprobs,
+        )
         confi_stream_out = confi_stream_out.view(-1, confi_stream_out.size(-1))
         stream_trans_loss, stream_nll_loss = label_smoothed_nll_loss(
             confi_stream_out,
@@ -158,7 +164,7 @@ class LabelSmoothedCrossEntropyStreamConfidenceCriterion(FairseqCriterion):
         #    stream_similar = pred_dec_label.view(-1,1),
         #   stream_weight=stream_weight
         )
-        confidence_loss = torch.sum(-torch.log(pred_dec_similar))
+        confidence_loss = torch.sum(-torch.log(pred_dec_similar.float().clamp_min(eps)))
         loss = golden_trans_loss + stream_trans_loss + self.confident_weight*confidence_loss
         
         return loss,golden_trans_loss,stream_trans_loss,confidence_loss
