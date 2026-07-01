@@ -33,7 +33,22 @@ class EvaluationTokenizer(object):
         punctuation_removal: bool = False,
         character_tokenization: bool = False,
     ):
-        from sacrebleu.tokenizers import TOKENIZERS
+        try:
+            from sacrebleu.tokenizers import TOKENIZERS
+        except ImportError:
+            from sacrebleu.tokenizers.tokenizer_13a import Tokenizer13a
+            from sacrebleu.tokenizers.tokenizer_intl import TokenizerV14International
+            from sacrebleu.tokenizers.tokenizer_ja_mecab import TokenizerJaMecab
+            from sacrebleu.tokenizers.tokenizer_none import NoneTokenizer
+            from sacrebleu.tokenizers.tokenizer_zh import TokenizerZh
+
+            TOKENIZERS = {
+                "none": NoneTokenizer,
+                "13a": Tokenizer13a,
+                "intl": TokenizerV14International,
+                "zh": TokenizerZh,
+                "ja-mecab": TokenizerJaMecab,
+            }
 
         assert tokenizer_type in TOKENIZERS, f"{tokenizer_type}, {TOKENIZERS}"
         self.lowercase = lowercase
