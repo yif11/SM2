@@ -409,7 +409,7 @@ class TransformerDecoderBase(FairseqIncrementalDecoder):
         if self.layer_norm is not None:
             x = self.layer_norm(x)
             if Prefix_Src_Len > 0:
-                stream_x = self.layer_norm(x)
+                stream_x = self.layer_norm(stream_x)
         # T x B x C -> B x T x C
         x = x.transpose(0, 1)
         if Prefix_Src_Len > 0:
