@@ -13,6 +13,7 @@ import math
 import os
 import sys
 from argparse import Namespace
+from collections import defaultdict
 from itertools import chain
 
 import numpy as np
@@ -194,9 +195,9 @@ def _main(cfg: DictConfig, output_file):
     Latency["DAL"] = []
 
     if cfg.generation.decoding_path is not None:
-        src_sents = [[] for _ in range(10000)]
-        tgt_sents = [[] for _ in range(10000)]
-        hyp_sents = [[] for _ in range(10000)]
+        src_sents = defaultdict(list)
+        tgt_sents = defaultdict(list)
+        hyp_sents = defaultdict(list)
 
     
     for sample in progress:
@@ -444,21 +445,21 @@ def _main(cfg: DictConfig, output_file):
 
     if cfg.generation.decoding_path is not None:
         with open(os.path.join(cfg.generation.decoding_path, 'source.txt'), 'w') as f:
-            for sents in src_sents:
+            for _sample_id, sents in sorted(src_sents.items()):
                 if len(sents)==0:
                     continue
                 for sent in sents:
                     f.write(sent+'\n')
 
         with open(os.path.join(cfg.generation.decoding_path, 'target.txt'), 'w') as f:
-            for sents in tgt_sents:
+            for _sample_id, sents in sorted(tgt_sents.items()):
                 if len(sents)==0:
                     continue
                 for sent in sents:
                     f.write(sent+'\n')
 
         with open(os.path.join(cfg.generation.decoding_path, 'decoding.txt'), 'w') as f:
-            for sents in hyp_sents:
+            for _sample_id, sents in sorted(hyp_sents.items()):
                 if len(sents)==0:
                     continue
                 for sent in sents:
